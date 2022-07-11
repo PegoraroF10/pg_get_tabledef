@@ -89,6 +89,7 @@ NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFI
     bPartition boolean;
     bInheritance boolean;
     bRelispartition boolean;
+    v_where_index integer;
     
   BEGIN
     SELECT c.oid, (select setting from pg_settings where name = 'server_version_num') INTO v_table_oid, v_pgversion FROM pg_catalog.pg_class c LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -286,7 +287,12 @@ NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFI
       IF v_partition_key IS NOT NULL AND v_partition_key <> '' THEN
         v_table_ddl := v_table_ddl || v_indexrec.indexdef || ';' || E'\n';
       ELSE
-        v_table_ddl := v_table_ddl || v_indexrec.indexdef || ' TABLESPACE ' || v_indexrec.tablespace || ';' || E'\n';
+        v_where_index = position(' WHERE ' in v_indexrec.indexdef)
+        if v_where_index > 0 then
+          v_table_ddl := v_table_ddl || left(v_indexrec.indexdef, v_where_index-1) || ' TABLESPACE ' || v_indexrec.tablespace || ' ' || substring(v_indexrec.indexdef from v_where_index) || ';' || E'\n';
+        else
+          v_table_ddl := v_table_ddl || v_indexrec.indexdef || ' TABLESPACE ' || v_indexrec.tablespace || ';' || E'\n';
+        end if;
       END IF;
       
     END LOOP;
